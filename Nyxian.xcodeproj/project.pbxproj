@@ -434,10 +434,12 @@
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
 				LindChain/OpenSSL.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
+				LindChain/llama.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
 			};
 			buildPhase = 79FDA8862F3F257900692496 /* Embed Frameworks */;
 			membershipExceptions = (
 				LindChain/OpenSSL.xcframework,
+				LindChain/llama.xcframework,
 			);
 		};
 		86DCC2932FA520EF00973169 /* Exceptions for "CoreCompiler" folder in "Embed Libraries" phase from "CoreCompiler" target */ = {
@@ -478,10 +480,12 @@
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
 				LindChain/OpenSSL.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
+				LindChain/llama.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
 			};
 			buildPhase = AFF4DB332DCA57EC00B1B5F9 /* Embed Libraries */;
 			membershipExceptions = (
 				LindChain/OpenSSL.xcframework,
+				LindChain/llama.xcframework,
 			);
 		};
 /* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */

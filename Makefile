@@ -153,6 +153,15 @@ CoreCompiler/CoreCompilerSupportLibs:
 	cp -r LLVM-On-iOS/CoreCompilerSupportLibs CoreCompiler/CoreCompilerSupportLibs
 	cp -r LLVM-On-iOS/LLVM.xcframework CoreCompiler/CoreCompilerSupportLibs/LLVM.xcframework
 
+# llama.cpp inference engine framework (Metal) for the on-device LLM agent.
+# Built once via llama.cpp's own xcframework script and staged where the
+# synchronized "Nyxian" group + pbxproj embed phase expect it. Only rebuilds
+# when the staged framework is missing.
+Nyxian/LindChain/llama.xcframework:
+	cd ThirdParty/llama.cpp; ./build-xcframework.sh
+	rm -rf Nyxian/LindChain/llama.xcframework
+	cp -r ThirdParty/llama.cpp/build-apple/llama.xcframework Nyxian/LindChain/llama.xcframework
+
 # Needed for jailbroken version for permasigned apps
 Nyxian/LindChain/JBSupport/tshelper:
 	$(MAKE) -C TrollStore pre_build
@@ -168,7 +177,7 @@ update-config:
 	./version.sh
 
 # Methods
-compile: Nyxian/LindChain/JBSupport/tshelper CoreCompiler/CoreCompilerSupportLibs
+compile: Nyxian/LindChain/JBSupport/tshelper CoreCompiler/CoreCompilerSupportLibs Nyxian/LindChain/llama.xcframework
 	chmod +x version.sh
 	./version.sh
 	xcodebuild \
@@ -212,6 +221,8 @@ clean-artifacts:
 
 clean-all: clean clean-artifacts
 	rm -rf CoreCompiler/CoreCompilerSupportLibs
+	rm -rf Nyxian/LindChain/llama.xcframework
 	-rm Nyxian/LindChain/JBSupport/tshelper
 	cd LLVM-On-iOS; make clean; git reset --hard
 	cd TrollStore; make clean; git reset --hard
+	cd ThirdParty/llama.cpp; rm -rf build-apple build-ios-device build-ios-sim build-macos build-visionos build-visionos-sim build-tvos-device build-tvos-sim

@@ -1,5 +1,6 @@
 **/.DS_store
 CoreCompiler/CoreCompilerSupportLibs/
+Nyxian/LindChain/llama.xcframework/
 build/
 *.ipa
 *.deb

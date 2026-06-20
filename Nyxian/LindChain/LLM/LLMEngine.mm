@@ -21,7 +21,7 @@
 
 #import "LLMEngine.h"
 
-#include "llama.h"
+#import <llama/llama.h>
 
 #include <string>
 #include <vector>

@@ -37,6 +37,8 @@ public final class LlamaCppBackend: LLMBackend, @unchecked Sendable {
     /// Load a GGUF model. Heavy and synchronous — call from a background context.
     /// `gpuLayers` defaults high to offload everything to Metal.
     public func loadModel(path: String, contextLength: UInt32 = 4096, gpuLayers: Int32 = 999) throws {
+        // Refuse models too large for the device before touching llama.cpp.
+        try LLMMemoryGuard.check(modelPath: path, contextLength: contextLength)
         var thrown: Error?
         queue.sync {
             do {

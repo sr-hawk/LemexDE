@@ -24,6 +24,9 @@ import UIKit
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // Session A temporary: runs the in-app LLM engine smoke test if a debug
+        // model is present. No-op otherwise. Remove once the agent UI lands.
+        LLMDebugRunner.runIfRequested()
         return true
     }
 }

@@ -68,6 +68,7 @@ bool liveProcessIsAvailable(void);
 #import <NXBootstrap.h>
 
 /* LLM Headers */
+#import <os/proc.h>
 #import <LindChain/LLM/LLMEngine.h>
 
 /* UI Headers */

@@ -21,6 +21,7 @@
 */
 
 #import <LindChain/LiveContainer/utils.h>
+#include <mach/mach.h>
 
 #define ASM(...) __asm__(#__VA_ARGS__)
 
@@ -95,4 +96,78 @@ uint64_t aarch64_emulate_adrp_ldr(uint32_t instruction, uint32_t ldrInstruction,
     
     // Emulate
     return adrp_target + (uint64_t) imm12;
+}
+
+/**
+ * Decode an "add Xd, Xn, #imm" (64-bit, immediate) instruction.
+ * Returns false for anything that is not an add-immediate.
+ */
+bool aarch64_emulate_add_imm(uint32_t instruction, uint32_t *dst, uint32_t *src, uint32_t *imm) {
+    // Check that this is an add instruction with immediate
+    if ((instruction & 0xFF000000) != 0x91000000) {
+        return false;
+    }
+
+    uint32_t imm12 = (instruction & 0x3FFC00) >> 10;
+
+    uint8_t shift = (instruction & 0xC00000) >> 22;
+    switch (shift) {
+        case 0:
+            *imm = imm12;
+            break;
+
+        case 1:
+            *imm = imm12 << 12;
+            break;
+
+        default:
+            return false;
+    }
+
+    *dst = instruction & 0x1F;
+    *src = (instruction >> 5) & 0x1F;
+    return true;
+}
+
+/**
+ * Returns true only if the whole [address, address+length) range lives inside a
+ * single mapped, readable region. This is what lets the dyld-API scanner probe
+ * unknown instruction memory on iOS 27 without faulting (the EXC_BAD_ACCESS at
+ * 0x3 the old fixed scanner produced).
+ */
+bool LCAddressRangeIsReadable(const void *address, size_t length) {
+    if(!address || length == 0) {
+        return false;
+    }
+
+    uintptr_t start = (uintptr_t)address;
+    if(start < 0x4000 || UINTPTR_MAX - start < length - 1) {
+        return false;
+    }
+
+    mach_vm_address_t region = (mach_vm_address_t)start;
+    mach_vm_size_t regionLength = 0;
+    struct vm_region_submap_short_info_64 info;
+    mach_msg_type_number_t infoCount = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+    natural_t depth = 99999;
+    kern_return_t kr = vm_region_recurse_64(mach_task_self(), &region, &regionLength, &depth, (vm_region_recurse_info_t)&info, &infoCount);
+    if(kr != KERN_SUCCESS || !(info.protection & VM_PROT_READ)) {
+        return false;
+    }
+
+    uintptr_t end = start + length;
+    uintptr_t regionEnd = (uintptr_t)region + (uintptr_t)regionLength;
+    return start >= (uintptr_t)region && end <= regionEnd;
+}
+
+/**
+ * Read a single pointer from address, but only if address is readable.
+ */
+bool LCReadPointer(const void *address, void **value) {
+    if(!value || !LCAddressRangeIsReadable(address, sizeof(void *))) {
+        return false;
+    }
+
+    *value = *(void * const *)address;
+    return true;
 }

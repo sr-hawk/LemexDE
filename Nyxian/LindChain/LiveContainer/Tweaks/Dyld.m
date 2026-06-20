@@ -145,85 +145,312 @@ uint32_t hook_dyld_get_program_sdk_version(void* dyldApiInstancePtr)
     return guestAppSdkVersion;
 }
 
+/*
+ * iOS 27 robust dyld-API vtable-slot finder.
+ *
+ * On iOS 27 Apple changed dyld's codegen: the load following the ADRP can be an
+ * LDUR / pre-indexed LDR (not the plain "LDR Xt, [Xn, #imm]" the old scanner
+ * required), and on arm64e there are ~20 extra instructions before the real
+ * ADRP. The old fixed scanner never matched, walked a bad offset and
+ * dereferenced near-null (EXC_BAD_ACCESS at 0x3). The helpers below decode the
+ * instructions register-aware and bounds-check every dereference, so a miss
+ * degrades to a clean `false` instead of a crash. Ported from
+ * CherryFlavoredBleach/LiveContainer (LiveContainer PR #1397), adapted to
+ * emexDE's existing aarch64_emulate_adrp_ldr / LCAddressRangeIsReadable.
+ */
+
+// Decode "ldr Xt, [Xn{, #imm}]" (unsigned offset, 64-bit). If expectedBaseReg
+// is not UINT32_MAX, the base register Xn must match it.
+static bool LCDecodeLdrUnsigned64(uint32_t instruction, uint32_t expectedBaseReg, uint32_t *targetReg, uint32_t *offset) {
+    if((instruction & 0xFFC00000) != 0xF9400000) {
+        return false;
+    }
+
+    uint32_t baseReg = (instruction >> 5) & 0x1F;
+    if(expectedBaseReg != UINT32_MAX && baseReg != expectedBaseReg) {
+        return false;
+    }
+
+    if(targetReg) {
+        *targetReg = instruction & 0x1F;
+    }
+    if(offset) {
+        *offset = ((instruction >> 10) & 0xFFF) << 3;
+    }
+    return true;
+}
+
+// Decode "ldr Xt, [Xn, #imm]!" (pre-index, 64-bit). offset is signed.
+static bool LCDecodeLdrPreIndex64(uint32_t instruction, uint32_t expectedBaseReg, uint32_t *targetReg, int32_t *offset) {
+    if((instruction & 0xFFE00C00) != 0xF8400C00) {
+        return false;
+    }
+
+    uint32_t baseReg = (instruction >> 5) & 0x1F;
+    if(expectedBaseReg != UINT32_MAX && baseReg != expectedBaseReg) {
+        return false;
+    }
+
+    int32_t imm9 = (instruction >> 12) & 0x1FF;
+    if(imm9 & 0x100) {
+        imm9 |= ~0x1FF;
+    }
+
+    if(targetReg) {
+        *targetReg = instruction & 0x1F;
+    }
+    if(offset) {
+        *offset = imm9;
+    }
+    return true;
+}
+
+// Decode "movz Xd, #imm{, lsl #shift}".
+static bool LCDecodeMovWideImmediate(uint32_t instruction, uint32_t *targetReg, uint64_t *value) {
+    if((instruction & 0x7F800000) != 0x52800000) {
+        return false;
+    }
+
+    uint64_t imm16 = (instruction & 0x1FFFE0) >> 5;
+    uint32_t shift = ((instruction >> 21) & 0x3) * 16;
+    if(targetReg) {
+        *targetReg = instruction & 0x1F;
+    }
+    if(value) {
+        *value = imm16 << shift;
+    }
+    return true;
+}
+
+// Decode "add Xd, Xn, Xm" (64-bit, shifted register form).
+static bool LCDecodeAddRegister64(uint32_t instruction, uint32_t *targetReg, uint32_t *leftReg, uint32_t *rightReg) {
+    if((instruction & 0xFF200000) != 0x8B000000) {
+        return false;
+    }
+
+    if(targetReg) {
+        *targetReg = instruction & 0x1F;
+    }
+    if(leftReg) {
+        *leftReg = (instruction >> 5) & 0x1F;
+    }
+    if(rightReg) {
+        *rightReg = (instruction >> 16) & 0x1F;
+    }
+    return true;
+}
+
+// Follow up to 4 unconditional "b" stubs at a function entry to the real body.
+static uint32_t *LCFollowUnconditionalBranch(uint32_t *baseAddr) {
+    uint32_t *target = baseAddr;
+    for(int i = 0; i < 4 && LCAddressRangeIsReadable(target, sizeof(uint32_t)); i++) {
+        uint32_t instruction = *target;
+        if((instruction & 0x7C000000) != 0x14000000) {
+            break;
+        }
+
+        int32_t imm26 = instruction & 0x03FFFFFF;
+        if(imm26 & 0x02000000) {
+            imm26 |= ~0x03FFFFFF;
+        }
+        target += imm26;
+    }
+    return target;
+}
+
+// Scan the dyld-API call stub for the instruction that loads the vtable slot,
+// handling both the arm64e (mov-imm + add + ldr / autda) and arm64 (ldr) forms.
+// Returns the address of the slot inside the vtable, or NULL.
+static void *LCFindDyldApiSlotFromStub(uint32_t *baseAddr, uint32_t scanStart, uint32_t scanEnd, uint32_t instanceReg, void *vtablePtr) {
+    bool isVtableReg[32] = { false };
+    bool hasImmediate[32] = { false };
+    bool hasSlotOffset[32] = { false };
+    uint64_t immediateByReg[32] = { 0 };
+    uint64_t slotOffsetByReg[32] = { 0 };
+    void *fallbackSlot = NULL;
+
+    for(uint32_t i = scanStart; i < scanEnd && LCAddressRangeIsReadable(baseAddr + i, sizeof(uint32_t)); i++) {
+        uint32_t instruction = baseAddr[i];
+        uint32_t targetReg = 0;
+        uint32_t offset = 0;
+
+        if(LCDecodeLdrUnsigned64(instruction, instanceReg, &targetReg, &offset) && offset == 0 && targetReg != 31) {
+            isVtableReg[targetReg] = true;
+            continue;
+        }
+
+        for(uint32_t reg = 0; reg < 32; reg++) {
+            if(!isVtableReg[reg]) {
+                continue;
+            }
+
+            if(LCDecodeLdrUnsigned64(instruction, reg, &targetReg, &offset) && offset != 0) {
+                return (uint8_t *)vtablePtr + offset;
+            }
+
+            int32_t signedOffset = 0;
+            if(LCDecodeLdrPreIndex64(instruction, reg, &targetReg, &signedOffset) && signedOffset > 0) {
+                return (uint8_t *)vtablePtr + signedOffset;
+            }
+
+            uint32_t addDst = 0;
+            uint32_t addSrc = 0;
+            uint32_t addImm = 0;
+            if(aarch64_emulate_add_imm(instruction, &addDst, &addSrc, &addImm) && addSrc == reg && addImm != 0) {
+                fallbackSlot = (uint8_t *)vtablePtr + addImm;
+                hasSlotOffset[addDst] = true;
+                slotOffsetByReg[addDst] = addImm;
+                continue;
+            }
+
+            uint32_t addLeft = 0;
+            uint32_t addRight = 0;
+            if(LCDecodeAddRegister64(instruction, &addDst, &addLeft, &addRight) && addLeft == reg && addRight < 32 && hasImmediate[addRight]) {
+                uint64_t slotOffset = immediateByReg[addRight];
+                if(slotOffset != 0) {
+                    fallbackSlot = (uint8_t *)vtablePtr + slotOffset;
+                    hasSlotOffset[addDst] = true;
+                    slotOffsetByReg[addDst] = slotOffset;
+                }
+                continue;
+            }
+        }
+
+        uint32_t immediateReg = 0;
+        uint64_t immediateValue = 0;
+        if(LCDecodeMovWideImmediate(instruction, &immediateReg, &immediateValue) && immediateReg != 31) {
+            hasImmediate[immediateReg] = true;
+            immediateByReg[immediateReg] = immediateValue;
+            continue;
+        }
+
+        for(uint32_t reg = 0; reg < 32; reg++) {
+            if(!hasSlotOffset[reg]) {
+                continue;
+            }
+
+            if(LCDecodeLdrUnsigned64(instruction, reg, &targetReg, &offset) && offset == 0) {
+                return (uint8_t *)vtablePtr + slotOffsetByReg[reg];
+            }
+        }
+    }
+
+    return fallbackSlot;
+}
+
+// Validate the ADRP at adrpOffset, find the following register-matching load
+// (scanning +1..+4), emulate to the gDyld storage, safely walk
+// storage -> instance -> vtable, then locate the API slot. Returns false (no
+// crash) on any unreadable pointer or pattern mismatch.
+static bool LCFindDyldApiSlotAtAdrpOffset(uint32_t *baseAddr, uint32_t adrpOffset, void **vtableFunctionPtr) {
+    if(!LCAddressRangeIsReadable(baseAddr + adrpOffset, sizeof(uint32_t[2]))) {
+        return false;
+    }
+
+    uint32_t adrpInst = baseAddr[adrpOffset];
+    if((adrpInst & 0x9F000000) != 0x90000000) {
+        return false;
+    }
+
+    uint32_t adrpReg = adrpInst & 0x1F;
+    for(uint32_t ldrOffset = adrpOffset + 1; ldrOffset < adrpOffset + 5; ldrOffset++) {
+        if(!LCAddressRangeIsReadable(baseAddr + ldrOffset, sizeof(uint32_t))) {
+            return false;
+        }
+
+        uint32_t instanceReg = 0;
+        uint32_t ignoredOffset = 0;
+        if(!LCDecodeLdrUnsigned64(baseAddr[ldrOffset], adrpReg, &instanceReg, &ignoredOffset)) {
+            continue;
+        }
+
+        void *gdyldStorage = (void *)aarch64_emulate_adrp_ldr(adrpInst, baseAddr[ldrOffset], (uint64_t)(baseAddr + adrpOffset));
+        void *gdyldInstance = NULL;
+        void *vtablePtr = NULL;
+        if(!gdyldStorage ||
+           !LCReadPointer(gdyldStorage, &gdyldInstance) ||
+           !gdyldInstance ||
+           !LCReadPointer(gdyldInstance, &vtablePtr) ||
+           !vtablePtr) {
+            continue;
+        }
+
+        void *slot = LCFindDyldApiSlotFromStub(baseAddr, ldrOffset + 1, ldrOffset + 48, instanceReg, vtablePtr);
+        if(slot && LCAddressRangeIsReadable(slot, sizeof(void *))) {
+            *vtableFunctionPtr = slot;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Try the caller's preferred ADRP offset, then the arm64e 26.4b1+ "+20" shift,
+// then a full 0..96 fallback scan.
+static bool LCFindDyldApiSlot(uint32_t *baseAddr, uint32_t preferredAdrpOffset, void **vtableFunctionPtr) {
+    uint32_t preferredOffsets[] = { preferredAdrpOffset, preferredAdrpOffset + 20 };
+    for(size_t i = 0; i < sizeof(preferredOffsets) / sizeof(preferredOffsets[0]); i++) {
+        if(LCFindDyldApiSlotAtAdrpOffset(baseAddr, preferredOffsets[i], vtableFunctionPtr)) {
+            return true;
+        }
+    }
+
+    for(uint32_t i = 0; i < 96; i++) {
+        if(i == preferredOffsets[0] || i == preferredOffsets[1]) {
+            continue;
+        }
+        if(LCFindDyldApiSlotAtAdrpOffset(baseAddr, i, vtableFunctionPtr)) {
+            NSLog(@"[LC] Found dyld API slot using fallback scan at instruction offset %u", i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool performHookDyldApi(const char* functionName, uint32_t adrpOffset, void** origFunction, void* hookFunction) {
-    
+
     uint32_t* baseAddr = dlsym(RTLD_DEFAULT, functionName);
-    assert(baseAddr != 0);
-    /*
-     arm64e 26.4b1+ has extra 20 instructions between adrpOffset and adrp
-     arm64e
-     1ad450b90  e10300aa   mov     x1, x0
-     1ad450b94  487b2090   adrp    x8, dyld4::gAPIs
-     1ad450b98  000140f9   ldr     x0, [x8]  {dyld4::gAPIs} may contain offset
-     1ad450b9c  100040f9   ldr     x16, [x0]
-     1ad450ba0  f10300aa   mov     x17, x0
-     1ad450ba4  517fecf2   movk    x17, #0x63fa, lsl #0x30
-     1ad450ba8  301ac1da   autda   x16, x17
-     1ad450bac  114780d2   mov     x17, #0x238
-     1ad450bb0  1002118b   add     x16, x16, x17
-     1ad450bb4  020240f9   ldr     x2, [x16]
-     1ad450bb8  e30310aa   mov     x3, x16
-     1ad450bbc  f00303aa   mov     x16, x3
-     1ad450bc0  7085f3f2   movk    x16, #0x9c2b, lsl #0x30
-     1ad450bc4  50081fd7   braa    x2, x16
-
-     arm64
-     00000001ac934c80         mov        x1, x0
-     00000001ac934c84         adrp       x8, #0x1f462d000
-     00000001ac934c88         ldr        x0, [x8, #0xf88]                            ; __ZN5dyld45gDyldE
-     00000001ac934c8c         ldr        x8, [x0]
-     00000001ac934c90         ldr        x2, [x8, #0x258]
-     00000001ac934c94         br         x2
-     */
-    uint32_t* adrpInstPtr = baseAddr + adrpOffset;
-    if((*adrpInstPtr & 0x9f000000) != 0x90000000)
-    {
-        adrpOffset += 20;
-        adrpInstPtr = baseAddr + adrpOffset;
+    if(!baseAddr) {
+        NSLog(@"[LC] Failed to find dyld API function %s", functionName);
+        return false;
     }
-    assert ((*adrpInstPtr & 0x9f000000) == 0x90000000);
-    void* gdyldPtr = (void*)aarch64_emulate_adrp_ldr(*adrpInstPtr, *(baseAddr + adrpOffset + 1), (uint64_t)(baseAddr + adrpOffset));
-    
-    assert(gdyldPtr != 0);
-    assert(*(void**)gdyldPtr != 0);
-    void* vtablePtr = **(void***)gdyldPtr;
-    
+    baseAddr = LCFollowUnconditionalBranch(baseAddr);
+
     void* vtableFunctionPtr = 0;
-    uint32_t* movInstPtr = baseAddr + adrpOffset + 6;
-
-    if((*movInstPtr & 0x7F800000) == 0x52800000)
-    {
-        /* arm64e, mov imm + add + ldr */
-        uint32_t imm16 = (*movInstPtr & 0x1FFFE0) >> 5;
-        vtableFunctionPtr = vtablePtr + imm16;
-    }
-    else if((*movInstPtr & 0xFFE00C00) == 0xF8400C00)
-    {
-        /* arm64e, ldr immediate Pre-index 64bit */
-        uint32_t imm9 = (*movInstPtr & 0x1FF000) >> 12;
-        vtableFunctionPtr = vtablePtr + imm9;
-    }
-    else
-    {
-        /* arm64 */
-        uint32_t* ldrInstPtr2 = baseAddr + adrpOffset + 3;
-        assert((*ldrInstPtr2 & 0xBFC00000) == 0xB9400000);
-        uint32_t size2 = (*ldrInstPtr2 & 0xC0000000) >> 30;
-        uint32_t imm12_2 = (*ldrInstPtr2 & 0x3FFC00) >> 10;
-        vtableFunctionPtr = vtablePtr + (imm12_2 << size2);
+    if(!LCFindDyldApiSlot(baseAddr, adrpOffset, &vtableFunctionPtr)) {
+        NSLog(@"[LC] Failed to resolve dyld API vtable slot for %s", functionName);
+        return false;
     }
 
-    
+    void* currentFunction = NULL;
+    if(!LCReadPointer(vtableFunctionPtr, &currentFunction) || !currentFunction) {
+        NSLog(@"[LC] Refusing to hook %s because the resolved vtable slot is not readable", functionName);
+        return false;
+    }
+
     kern_return_t ret = builtin_vm_protect(mach_task_self(), (mach_vm_address_t)vtableFunctionPtr, sizeof(uintptr_t), false, PROT_READ | PROT_WRITE | VM_PROT_COPY);
-    assert(ret == KERN_SUCCESS);
-    
+    if(ret != KERN_SUCCESS)
+    {
+        if(!os_tpro_is_supported())
+        {
+            NSLog(@"[LC] Failed to make dyld API vtable slot writable for %s: %d", functionName, ret);
+            return false;
+        }
+        os_thread_self_restrict_tpro_to_rw();
+    }
+
     if(origFunction != NULL)
     {
-        *origFunction = (void*)*(void**)vtableFunctionPtr;
+        *origFunction = currentFunction;
     }
-    
+
     *(uint64_t*)vtableFunctionPtr = (uint64_t)hookFunction;
     builtin_vm_protect(mach_task_self(), (mach_vm_address_t)vtableFunctionPtr, sizeof(uintptr_t), false, PROT_READ);
+    if(ret != KERN_SUCCESS)
+    {
+        os_thread_self_restrict_tpro_to_ro();
+    }
     return true;
 }
 
@@ -294,35 +521,66 @@ void* getGuestAppHeader(void)
 
 bool initGuestSDKVersionInfo(void)
 {
+    /*
+     * SDK-version spoofing is an enhancement, not a launch requirement: a guest
+     * compiled on-device against the current SDK runs without it. So every
+     * failure path here returns false (the caller logs and continues) instead of
+     * aborting the process. This is what stops the second iOS 27 crash, where
+     * Apple removed/renamed sVersionMap and the old hard asserts killed the app.
+     */
     void* dyldBase = getDyldBase();
+    if(!dyldBase) {
+        return false;
+    }
     /*
      * it seems Apple is constantly changing findVersionSetEquivalent's
-     * signature so we directly search sVersionMap instead.
+     * signature so we directly search sVersionMap instead. Apple renamed the
+     * symbol on iOS 27 (dropped the internal-linkage 'L').
      */
     const char* dyldPath = "/usr/lib/dyld";
-    uint64_t offset = LCFindSymbolOffset(dyldPath, "__ZN5dyld3L11sVersionMapE");
+    uint64_t offset;
+    if(@available(iOS 27.0, *)) {
+        offset = LCFindSymbolOffset(dyldPath, "__ZN5dyld311sVersionMapE");
+    } else {
+        offset = LCFindSymbolOffset(dyldPath, "__ZN5dyld3L11sVersionMapE");
+    }
     uint32_t *versionMapPtr = dyldBase + offset;
-    
-    assert(versionMapPtr);
+
     /*
      * however sVersionMap's struct size is also unknown, but we can figure it out
      * we assume the size is 10K so we won't need to change this line until maybe iOS 40
      */
     uint32_t* versionMapEnd = versionMapPtr + 2560;
+    /*
+     * Bounds-check before touching versionMapPtr: a missing/renamed symbol makes
+     * LCFindSymbolOffset return a garbage offset (it computes result-header, so a
+     * NULL result wraps rather than returning 0), which would otherwise be a wild
+     * dereference on iOS 27.
+     */
     /* ensure the first is versionSet and the third is iOS version (5.0.0) */
-    assert(versionMapPtr[0] == 0x07db0901 && versionMapPtr[2] == 0x00050000);
+    if(!LCAddressRangeIsReadable(versionMapPtr, sizeof(uint32_t[3])) ||
+       versionMapPtr[0] != 0x07db0901 || versionMapPtr[2] != 0x00050000) {
+        NSLog(@"[LC] sVersionMap not found or layout changed; skipping SDK version spoofing");
+        return false;
+    }
     /* get struct size. we assume size is smaller then 128. appearently Apple won't have so many platforms */
     uint32_t size = 0;
     for(int i = 1; i < 128; ++i)
     {
+        if(!LCAddressRangeIsReadable(versionMapPtr + i, sizeof(uint32_t))) {
+            break;
+        }
         /* find the next versionSet (for 6.0.0) */
         if(versionMapPtr[i] == 0x07dc0901) {
             size = i;
             break;
         }
     }
-    assert(size);
-    
+    if(!size) {
+        NSLog(@"[LC] could not determine sVersionMap stride; skipping SDK version spoofing");
+        return false;
+    }
+
     NSOperatingSystemVersion currentVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
     uint32_t maxVersion = ((uint32_t)currentVersion.majorVersion << 16) | ((uint32_t)currentVersion.minorVersion << 8);
     uint32_t candidateVersion = 0;
@@ -330,6 +588,9 @@ bool initGuestSDKVersionInfo(void)
     uint32_t newVersionSetVersion = 0;
     for(uint32_t* nowVersionMapItem = versionMapPtr; nowVersionMapItem < versionMapEnd; nowVersionMapItem += size)
     {
+        if(!LCAddressRangeIsReadable(nowVersionMapItem, sizeof(uint32_t[3]))) {
+            break;
+        }
         newVersionSetVersion = nowVersionMapItem[2];
         if(newVersionSetVersion > guestAppSdkVersion)
         {
@@ -380,11 +641,17 @@ void DyldHooksInit(void)
         }
         
         guestAppSdkVersion = getDyldImageBuildVersion(getGuestAppHeader()).version;
+        /*
+         * SDK-version spoofing is optional: guests compiled on-device against the
+         * current SDK launch without it. On iOS 27, where sVersionMap may be gone
+         * or the dyld API slot unresolvable, skip spoofing and continue rather
+         * than exit(0)-ing the whole guest.
+         */
         if(!initGuestSDKVersionInfo() ||
            !performHookDyldApi("dyld_program_sdk_at_least", 1, NULL, hook_dyld_program_sdk_at_least) ||
            !performHookDyldApi("dyld_get_program_sdk_version", 0, NULL, hook_dyld_get_program_sdk_version))
         {
-            exit(0);
+            NSLog(@"[LC] SDK version spoofing unavailable on this OS; continuing without it");
         }
         return;
     });

@@ -67,6 +67,9 @@ bool liveProcessIsAvailable(void);
 #import <LindChain/Project/NXUtils.h>
 #import <NXBootstrap.h>
 
+/* LLM Headers */
+#import <LindChain/LLM/LLMEngine.h>
+
 /* UI Headers */
 #import <UI/XCodeButton.h>
 #import <LindChain/Debugger/Logger.h>

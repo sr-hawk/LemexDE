@@ -7,3 +7,6 @@
 [submodule "LLVM-On-iOS"]
 	path = LLVM-On-iOS
 	url = https://github.com/emexlab/LLVM-On-iOS
+[submodule "ThirdParty/llama.cpp"]
+	path = ThirdParty/llama.cpp
+	url = https://github.com/ggml-org/llama.cpp

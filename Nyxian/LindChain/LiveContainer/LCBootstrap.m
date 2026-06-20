@@ -46,18 +46,36 @@
 
 int hook__NSGetExecutablePath_overwriteExecPath(char*** dyldApiInstancePtr, char* newPath, uint32_t* bufsize)
 {
-    assert(dyldApiInstancePtr != 0);
+    if(dyldApiInstancePtr == 0 || !LCAddressRangeIsReadable(dyldApiInstancePtr + 1, sizeof(char**))) {
+        NSLog(@"[LC] _NSGetExecutablePath hook: dyld API instance not readable; leaving exec-path unchanged");
+        return -1;
+    }
     char** dyldConfig = dyldApiInstancePtr[1];
-    assert(dyldConfig != 0);
-    
+    if(dyldConfig == 0) {
+        NSLog(@"[LC] _NSGetExecutablePath hook: null dyld config; leaving exec-path unchanged");
+        return -1;
+    }
+
     char** mainExecutablePathPtr = 0;
-    // mainExecutablePath is at 0x10 for iOS 15~18.3.2, 0x20 for iOS 18.4+
-    if(dyldConfig[2] != 0 && dyldConfig[2][0] == '/') {
-        mainExecutablePathPtr = dyldConfig + 2;
-    } else if (dyldConfig[4] != 0 && dyldConfig[4][0] == '/') {
-        mainExecutablePathPtr = dyldConfig + 4;
-    } else {
-        assert(mainExecutablePathPtr != 0);
+    // mainExecutablePath sits at a small, version-dependent slot in dyld's config
+    // (0x10 for iOS 15~18.3.2, 0x20 for iOS 18.4+, and it may move again on iOS 27),
+    // so scan a bounded window for the first entry that looks like an absolute path,
+    // bounds-checking every dereference.
+    for(int i = 2; i <= 8; i++) {
+        if(!LCAddressRangeIsReadable(dyldConfig + i, sizeof(char*))) {
+            break;
+        }
+        char* candidate = dyldConfig[i];
+        if(candidate != 0 && LCAddressRangeIsReadable(candidate, 1) && candidate[0] == '/') {
+            mainExecutablePathPtr = dyldConfig + i;
+            break;
+        }
+    }
+    if(mainExecutablePathPtr == 0) {
+        // The bundle was already overwritten via CFOverwrite in LCOverwriteExecutablePath,
+        // so a missed exec-path patch should degrade gracefully, not crash.
+        NSLog(@"[LC] _NSGetExecutablePath hook: could not locate exec-path slot; leaving it unchanged");
+        return -1;
     }
 
     kern_return_t ret = builtin_vm_protect(mach_task_self(), (mach_vm_address_t)mainExecutablePathPtr, sizeof(mainExecutablePathPtr), false, PROT_READ | PROT_WRITE);

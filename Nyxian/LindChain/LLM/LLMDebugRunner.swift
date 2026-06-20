@@ -33,14 +33,18 @@ public enum LLMDebugRunner {
     private static let modelFileName = "llm-debug.gguf"
     private static let prompt = "Write a short haiku about compiling code on an iPhone."
 
-    /// Called from app launch. Cheap and silent when no debug model is present.
+    /// Called from app launch. Uses the model selected in the picker, falling
+    /// back to a `llm-debug.gguf` in Documents. Silent when neither is present.
     public static func runIfRequested() {
-        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return
-        }
-        let modelURL = docs.appendingPathComponent(modelFileName)
-        guard FileManager.default.fileExists(atPath: modelURL.path) else {
-            NSLog("[LLMDebug] no \(modelFileName) in Documents; skipping engine smoke test")
+        let modelURL: URL
+        if let active = LLMModelStore.shared.activeModelURL {
+            modelURL = active
+        } else if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+                  case let fallback = docs.appendingPathComponent(modelFileName),
+                  FileManager.default.fileExists(atPath: fallback.path) {
+            modelURL = fallback
+        } else {
+            NSLog("[LLMDebug] no model selected and no \(modelFileName) in Documents; skipping engine smoke test")
             return
         }
         Task.detached(priority: .utility) {

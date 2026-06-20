@@ -38,12 +38,12 @@ class SettingsViewController: UIThemedTableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 #if !JAILBREAK_ENV
 #if DEBUG
-        return 6
+        return 7
 #else
-        return 5
+        return 6
 #endif // DEBUG
 #else
-        return 3
+        return 4
 #endif /* !JAILBREAK_ENV */
     }
 
@@ -96,6 +96,17 @@ class SettingsViewController: UIThemedTableViewController {
             cell.textLabel?.text = "Credits"
             break
 #endif // DEBUG
+#if DEBUG
+        case 6:
+            cell.imageView?.image = UIImage(systemName: "brain.head.profile")
+            cell.textLabel?.text = "Model"
+            break
+#else
+        case 5:
+            cell.imageView?.image = UIImage(systemName: "brain.head.profile")
+            cell.textLabel?.text = "Model"
+            break
+#endif // DEBUG
 #else
         case 0:
             cell.imageView?.image = UIImage(systemName: {
@@ -114,6 +125,10 @@ class SettingsViewController: UIThemedTableViewController {
         case 2:
             cell.imageView?.image = UIImage(systemName: "person.3.fill")
             cell.textLabel?.text = "Credits"
+            break
+        case 3:
+            cell.imageView?.image = UIImage(systemName: "brain.head.profile")
+            cell.textLabel?.text = "Model"
             break
 #endif /* !JAILBREAK_ENV */
         default:
@@ -145,9 +160,13 @@ class SettingsViewController: UIThemedTableViewController {
                 return KernelLogViewController()
             case 5:
                 return CreditsViewController(style: .insetGrouped)
+            case 6:
+                return LLMModelPickerViewController(style: .insetGrouped)
 #else
             case 4:
                 return CreditsViewController(style: .insetGrouped)
+            case 5:
+                return LLMModelPickerViewController(style: .insetGrouped)
 #endif // DEBUG
 #else
             case 0:
@@ -156,6 +175,8 @@ class SettingsViewController: UIThemedTableViewController {
                 return CustomizationViewController(style: .insetGrouped)
             case 2:
                 return CreditsViewController(style: .insetGrouped)
+            case 3:
+                return LLMModelPickerViewController(style: .insetGrouped)
 #endif /* !JAILBREAK_ENV */
             default:
                 return nil

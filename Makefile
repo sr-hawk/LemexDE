@@ -177,7 +177,7 @@ update-config:
 	./version.sh
 
 # Methods
-compile: Nyxian/LindChain/JBSupport/tshelper CoreCompiler/CoreCompilerSupportLibs Nyxian/LindChain/llama.xcframework
+compile: CoreCompiler/CoreCompilerSupportLibs Nyxian/LindChain/llama.xcframework
 	chmod +x version.sh
 	./version.sh
 	xcodebuild \

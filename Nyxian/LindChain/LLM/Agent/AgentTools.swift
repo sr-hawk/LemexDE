@@ -76,6 +76,8 @@ public extension AgentTools {
             ListFilesTool(workspace: workspace),
             ReadFileTool(workspace: workspace),
             SearchTool(workspace: workspace),
+            WriteFileTool(workspace: workspace),
+            ApplyPatchTool(workspace: workspace),
         ])
     }
 }

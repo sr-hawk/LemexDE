@@ -59,7 +59,12 @@ public struct RunTool: AgentTool, @unchecked Sendable {
         // uses for the IDE console.
         let outPipe = Pipe()
         let inPipe = Pipe()
-        let map = FDMapObject.emptyMap()
+        // FDMapObject.emptyMap() / PEProcessManager.shared() import as optionals
+        // (the ObjC headers carry no nullability annotations); they're never
+        // actually nil, but Swift requires the unwrap.
+        guard let map = FDMapObject.emptyMap() else {
+            return .failure("Could not allocate a file-descriptor map.")
+        }
         map.appendFileDescriptor(inPipe.fileHandleForReading.fileDescriptor, withMappingToLoc: STDIN_FILENO)
         map.appendFileDescriptor(outPipe.fileHandleForWriting.fileDescriptor, withMappingToLoc: STDOUT_FILENO)
         map.appendFileDescriptor(outPipe.fileHandleForWriting.fileDescriptor, withMappingToLoc: STDERR_FILENO)
@@ -74,7 +79,10 @@ public struct RunTool: AgentTool, @unchecked Sendable {
         func stopReading() { outPipe.fileHandleForReading.readabilityHandler = nil }
 
         // Launch the product.
-        let manager = PEProcessManager.shared()
+        guard let manager = PEProcessManager.shared() else {
+            stopReading()
+            return .failure("The process manager is unavailable.")
+        }
         let scheme = project.projectConfig.schemeKind
         let pid: pid_t
         if scheme == .utility {

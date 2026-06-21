@@ -9,6 +9,9 @@ on:
       - '**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -32,13 +35,29 @@ jobs:
       - name: Install Dependencies
         run: |
           set -e
-          brew install libarchive
+          brew install libarchive zstd
 
       - name: Build Jailed
         timeout-minutes: 1200
         run: |
           set -e
           CHECK_DEPS=0 make jailed
+
+      - name: Publish prebuilt toolchain
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if gh release view prebuilt-llvm-on-ios >/dev/null 2>&1; then
+            echo "prebuilt toolchain already published; skipping"
+          elif [ -d CoreCompiler/CoreCompilerSupportLibs ]; then
+            tar -C CoreCompiler -cf - CoreCompilerSupportLibs | zstd -19 -o prebuilt-toolchain.tar.zst
+            ls -lh prebuilt-toolchain.tar.zst
+            gh release create prebuilt-llvm-on-ios prebuilt-toolchain.tar.zst \
+              --title "Prebuilt LLVM-On-iOS toolchain (swift-6.3.2)" \
+              --notes "Auto-captured on-device toolchain. Delete this release to force a rebuild."
+          fi
 
       - name: Upload Jailed
         uses: actions/upload-artifact@v4

@@ -148,10 +148,7 @@ trollstore: clean check compile pseudo-sign package-app clean
 
 # Dependencies
 CoreCompiler/CoreCompilerSupportLibs:
-	cd LLVM-On-iOS; $(MAKE)
-	rm -rf CoreCompiler/CoreCompilerSupportLibs
-	cp -r LLVM-On-iOS/CoreCompilerSupportLibs CoreCompiler/CoreCompilerSupportLibs
-	cp -r LLVM-On-iOS/LLVM.xcframework CoreCompiler/CoreCompilerSupportLibs/LLVM.xcframework
+	bash provision-toolchain.sh
 
 # llama.cpp inference engine framework (Metal) for the on-device LLM agent.
 # Built once via llama.cpp's own xcframework script and staged where the

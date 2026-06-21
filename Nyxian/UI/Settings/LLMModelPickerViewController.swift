@@ -151,8 +151,10 @@ class LLMModelPickerViewController: UIThemedTableViewController, UIDocumentPicke
     // MARK: - Import
 
     private func presentImporter() {
+        // Prefer a .gguf-only filter; fall back to any file only if the system
+        // can't construct the gguf type.
         let ggufType = UTType(filenameExtension: "gguf")
-        let types = [ggufType, UTType.data].compactMap { $0 }
+        let types: [UTType] = ggufType.map { [$0] } ?? [.data]
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
         picker.delegate = self
         picker.allowsMultipleSelection = false

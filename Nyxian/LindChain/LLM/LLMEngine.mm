@@ -282,12 +282,13 @@ static NSError *LLMMakeError(NSInteger code, NSString *message) {
             break;
         }
 
+        // llama_sampler_sample already accepts the token into the sampler state
+        // internally, so we must NOT call llama_sampler_accept again here.
         llama_token tok = llama_sampler_sample(smpl, _ctx, -1);
         if (llama_vocab_is_eog(_vocab, tok)) {
             finish = LLMFinishReasonStop;
             break;
         }
-        llama_sampler_accept(smpl, tok);
 
         std::string piece = LLMPieceForToken(_vocab, tok);
         if (!piece.empty()) {

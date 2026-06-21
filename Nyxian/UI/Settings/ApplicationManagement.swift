@@ -22,7 +22,6 @@
 import UIKit
 import UniformTypeIdentifiers
 
-#if !JAILBREAK_ENV
 
 extension UTType {
     static var ipa: UTType {
@@ -472,4 +471,3 @@ class ApplicationManagementViewController: UIThemedTableViewController, UITextFi
     }
 }
 
-#endif // !JAILBREAK_ENV

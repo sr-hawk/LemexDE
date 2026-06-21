@@ -36,15 +36,11 @@ class SettingsViewController: UIThemedTableViewController {
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-#if !JAILBREAK_ENV
 #if DEBUG
         return 7
 #else
         return 6
 #endif // DEBUG
-#else
-        return 4
-#endif /* !JAILBREAK_ENV */
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -52,7 +48,6 @@ class SettingsViewController: UIThemedTableViewController {
         cell.accessoryType = .disclosureIndicator
 
         switch indexPath.row {
-#if !JAILBREAK_ENV
         case 0:
             cell.imageView?.image = UIImage(systemName: {
                 if #available(iOS 16.0, *) {
@@ -107,30 +102,6 @@ class SettingsViewController: UIThemedTableViewController {
             cell.textLabel?.text = "Model"
             break
 #endif // DEBUG
-#else
-        case 0:
-            cell.imageView?.image = UIImage(systemName: {
-                if #available(iOS 16.0, *) {
-                    return "wrench.adjustable.fill"
-                } else {
-                    return "gearshape.2.fill"
-                }
-            }())
-            cell.textLabel?.text = "Toolchain"
-            break
-        case 1:
-            cell.imageView?.image = UIImage(systemName: "paintbrush.fill")
-            cell.textLabel?.text = "Customization"
-            break
-        case 2:
-            cell.imageView?.image = UIImage(systemName: "person.3.fill")
-            cell.textLabel?.text = "Credits"
-            break
-        case 3:
-            cell.imageView?.image = UIImage(systemName: "brain.head.profile")
-            cell.textLabel?.text = "Model"
-            break
-#endif /* !JAILBREAK_ENV */
         default:
             break
         }
@@ -146,7 +117,6 @@ class SettingsViewController: UIThemedTableViewController {
     private func navigateToController(for index: Int, animated: Bool) {
         guard let viewController: UIViewController = {
             switch index {
-#if !JAILBREAK_ENV
             case 0:
                 return ToolChainController(style: .insetGrouped)
             case 1:
@@ -168,16 +138,6 @@ class SettingsViewController: UIThemedTableViewController {
             case 5:
                 return LLMModelPickerViewController(style: .insetGrouped)
 #endif // DEBUG
-#else
-            case 0:
-                return ToolChainController(style: .insetGrouped)
-            case 1:
-                return CustomizationViewController(style: .insetGrouped)
-            case 2:
-                return CreditsViewController(style: .insetGrouped)
-            case 3:
-                return LLMModelPickerViewController(style: .insetGrouped)
-#endif /* !JAILBREAK_ENV */
             default:
                 return nil
             }

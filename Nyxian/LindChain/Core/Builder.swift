@@ -23,12 +23,6 @@ import Foundation
 import Combine
 import MobileDevelopmentKit
 
-#if JAILBREAK_ENV
-
-// https://github.com/davidmurray/ios-reversed-headers/blob/b8fd3093e0e72107034792ed65272880820fecd5/BackBoardServices/BackBoardServices.h#L64
-@_silgen_name("BKSTerminateApplicationForReasonAndReportWithDescription") func BKSTerminateApplicationForReasonAndReportWithDescription(_ bundleID: CFString,_ unknown: Int, _ unknown1: Int, _ desc: CFString)
-
-#endif // JAILBREAK_ENV
 
 class LDEPhaseRunner: MDKPhaseRunner {
     private var pstep: Double = 0.0 // TODO: needs to be float for extremely large projects
@@ -288,7 +282,6 @@ class Builder: NSObject, MDKDriverDelegate, MDKPhaseRunnerDelegate {
             XCButton.stopSpinning()
         }
         
-#if !JAILBREAK_ENV
         if(buildType == .RunningApp) {
             if LCUtils.certificateData() == nil {
                 throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"No code signature present to perform signing, import code signature in Settings > Certificate. Note that the code signature must be the same code signature used to sign Nyxian."])
@@ -376,69 +369,9 @@ class Builder: NSObject, MDKDriverDelegate, MDKPhaseRunnerDelegate {
             macho_after_sign(self.project.machoURL.path, self.project.entitlementsConfig.entitlement)
             try self.package()
         }
-#else
-        
-        try self.package()
-        
-        if buildType == .RunningApp,
-          self.project.projectConfig.schemeKind == .app {
-            // installing app
-            var output: NSString?
-            if shell(["\(Bundle.main.bundlePath)/tshelper","install",self.project.packageURL.path], 0, nil, &output) != 0 {
-                throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:output ?? "Unknown error happened installing application"])
-            }
-            
-            BKSTerminateApplicationForReasonAndReportWithDescription(self.project.projectConfig.bundleid! as CFString, 0, 0, "reinstalled application" as CFString)
-            
-            // opening app on iOS 16.x and above in our app it self in case user wants it so
-            if #available(iOS 16.0, *) {
-                
-                // avoid lsapplication workspace if user wants it so
-                // FIXME: currently unsupported
-                if let avoidLSAWObj: NSNumber = (NSNumber(value: false) as NSNumber?) /*UserDefaults.standard.object(forKey: "LDEOpenAppInsideNyxian") as? NSNumber*/,
-                   !avoidLSAWObj.boolValue {
-                    
-                    var success = false
-                    let maxAttempts = 10
-                    let delay: TimeInterval = 0.5
-                    
-                    for attempt in 1...maxAttempts {
-                        if LSApplicationWorkspace.default().openApplication(withBundleID: self.project.projectConfig.bundleid) {
-                            success = true
-                            break
-                        }
-                        
-                        Thread.sleep(forTimeInterval: delay)
-                    }
-                    
-                    if !success {
-                        throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Failed to open application"])
-                    }
-                    
-                    return
-                }
-                
-                PEProcessManager.shared().spawnProcess(withBundleIdentifier: self.project.projectConfig.bundleid)
-            } else {
-                while(!LSApplicationWorkspace.default().openApplication(withBundleID: self.project.projectConfig.bundleid)) {
-                    relax()
-                }
-            }
-        }
-#endif // !JAILBREAK_ENV
     }
     
     func package() throws {
-#if JAILBREAK_ENV
-        let entitlementsPath: String = "\(self.project.url.path)/Config/Entitlements.plist"
-        if FileManager.default.fileExists(atPath: entitlementsPath),
-           self.project.projectConfig.schemeKind == .app {
-            // pseudo signing executable
-            if !ZSigner.adhocSignMachO(atPath: self.project.machoURL!.path, bundleId: self.project.projectConfig.bundleid!, entitlementData: try Data(contentsOf: URL(fileURLWithPath: entitlementsPath))) {
-                throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Unknown error happened pseudo signing application with entitlements"])
-            }
-        }
-#endif // JAILBREAK_ENV
         
         zipDirectoryAtPath(project.payloadURL.path, project.packageURL.path, true)
     }

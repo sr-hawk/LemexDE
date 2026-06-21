@@ -24,9 +24,7 @@
 #import <LindChain/WindowServer/NXWindowServer.h>
 #import <LindChain/Utils/Swizzle.h>
 
-#if !JAILBREAK_ENV
 #import <LindChain/Services/applicationmgmtd/LDEApplicationWorkspace.h>
-#endif /* !JAILBREAK_ENV */
 
 #import <LindChain/ProcEnvironment/Utils/klog.h>
 #import <objc/runtime.h>
@@ -103,9 +101,7 @@ void UIKitFixesInit(void)
             context.appearanceStyle = 2;
         }];
     } @catch (NSException *exception) {
-#if !JAILBREAK_ENV
         klog_log("LDEWindowSessionApplication", "presenter creation failed: %s", [exception.reason UTF8String]);
-#endif /* !JAILBREAK_ENV */
         return NO;
     }
     
@@ -177,9 +173,7 @@ void UIKitFixesInit(void)
     }];
  
     /* TODO: implement the jailbreak way of getting a snapshot of a iOS app */
-#if !JAILBREAK_ENV
     [self.process sendSignal:SIGUSR1];
-#endif /* !JAILBREAK_ENV */
     
     /* deactivate the presenter */
     [self.presenter deactivate];
@@ -342,9 +336,7 @@ void UIKitFixesInit(void)
             context.appearanceStyle = 2;
         }];
     } @catch (NSException *exception) {
-#if !JAILBREAK_ENV
         klog_log("NXWindowSessionApplication", "presenter creation failed: %s", [exception.reason UTF8String]);
-#endif /* !JAILBREAK_ENV */
         os_unfair_lock_unlock(&_lock);
         return NO;
     }

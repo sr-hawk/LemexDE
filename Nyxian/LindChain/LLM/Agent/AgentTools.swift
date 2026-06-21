@@ -80,10 +80,8 @@ public extension AgentTools {
             ApplyPatchTool(workspace: workspace),
             BuildTool(project: project),
         ]
-#if !JAILBREAK_ENV
         // run() drives the LiveProcess subsystem, available only in the jailed build.
         tools.append(RunTool(project: project))
-#endif
         return AgentTools(workspace: workspace, tools: tools)
     }
 }

@@ -21,9 +21,7 @@
 
 #import <LindChain/ProcEnvironment/Process/PEProcessManager.h>
 
-#if !JAILBREAK_ENV
 #import <LindChain/Services/applicationmgmtd/LDEApplicationWorkspace.h>
-#endif /* !JAILBREAK_ENV */
 
 #import <LindChain/ProcEnvironment/Surface/proc/proc.h>
 #import <LindChain/ProcEnvironment/panic.h>
@@ -56,7 +54,6 @@
     return processManagerSingletone;
 }
 
-#if !JAILBREAK_ENV
 
 - (pid_t)spawnProcessWithItems:(NSDictionary*)items
       withKernelSurfaceProcess:(ksurface_proc_t*)proc
@@ -182,11 +179,6 @@
     return pid;
 }
 
-#else
-
-
-
-#endif /* !JAILBREAK_ENV */
 
 - (PEProcess*)processForProcessIdentifier:(pid_t)pid
 {

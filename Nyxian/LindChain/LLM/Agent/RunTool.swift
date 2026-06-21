@@ -22,7 +22,6 @@
 // run() drives the in-app process subsystem (PEProcessManager) and the
 // LiveProcess extension, which are only available in the jailed (non-jailbreak)
 // build. It is also the one tool gated on the iOS 27 LiveProcess fix.
-#if !JAILBREAK_ENV
 
 import Foundation
 
@@ -161,4 +160,3 @@ private final class OutputCollector: @unchecked Sendable {
     }
 }
 
-#endif /* !JAILBREAK_ENV */

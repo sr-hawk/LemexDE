@@ -118,20 +118,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UITabBarControllerDeleg
             return;
         }
         
-#if JAILBREAK_ENV
-        let ret = shell([[Bundle.main.executablePath]], 0, nil, nil)
-        if(ret != 0)
-        {
-            let label = UILabel()
-            label.text = "NyxianForJB is incorrectly entitled\n\n\ntest exec ret: \(ret)"
-            label.frame = UIScreen.main.bounds
-            label.numberOfLines = 0
-            self.window?.addSubview(label)
-            self.window?.makeKeyAndVisible()
-            self.window?.bringSubviewToFront(label)
-            return
-        }
-#else
         if(!liveProcessIsAvailable())
         {
             let label = UILabel()
@@ -143,7 +129,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UITabBarControllerDeleg
             self.window?.bringSubviewToFront(label)
             return
         }
-#endif // JAILBREAK_ENV
         
         NXBootstrap.shared().bootstrap()
         

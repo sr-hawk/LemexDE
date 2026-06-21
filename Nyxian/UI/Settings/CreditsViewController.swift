@@ -25,7 +25,6 @@ import UIKit
 // AppInfoView
 class CreditsViewController: UIThemedTableViewController {
     
-#if !JAILBREAK_ENV
     private var credits: [Credit] = [
         Credit(name: "emexLabs", role: "Maintainer", githubURL: "https://github.com/emexlab"),
         Credit(name: "LiveContainer", role: "LiveContainer", githubURL: "https://github.com/livecontainer"),
@@ -39,20 +38,6 @@ class CreditsViewController: UIThemedTableViewController {
         Credit(name: "sxdev", role: "Drawn app icons", githubURL: "https://github.com/SamoXcZ"),
         Credit(name: "xzadik", role: "Nyxcat app icons", githubURL: "https://github.com/xzadik"),
     ]
-#else
-    private var credits: [Credit] = [
-        Credit(name: "emexLabs", role: "Maintainer", githubURL: "https://github.com/emexlab"),
-        Credit(name: "LiveContainer", role: "LiveContainer", githubURL: "https://github.com/livecontainer"),
-        Credit(name: "Simon Støvring", role: "Runestone", githubURL: "https://github.com/simonbs"),
-        Credit(name: "Vinogradov Daniil", role: "Massive help on LLVM-On-iOS", githubURL: "https://github.com/XITRIX"),
-        Credit(name: "light-tech", role: "LLVM-On-iOS", githubURL: "https://github.com/light-tech"),
-        Credit(name: "Lars Fröder", role: "Litehook and TrollStore", githubURL: "https://github.com/opa334"),
-        Credit(name: "엄세환", role: "Contributor", githubURL: "https://github.com/op06072"),
-        Credit(name: "ayame09", role: "Original Nyxian app icons", githubURL: "https://github.com/ayayame09"),
-        Credit(name: "sxdev", role: "Drawn app icons", githubURL: "https://github.com/SamoXcZ"),
-        Credit(name: "xzadik", role: "Nyxcat app icons", githubURL: "https://github.com/xzadik"),
-    ]
-#endif // !JAILBREAK_ENV
     
     override func viewDidLoad() {
         super.viewDidLoad()

@@ -78,11 +78,7 @@ class CustomizationViewController: UIThemedTableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-#if !JAILBREAK_ENV
             return 2
-#else
-            return 1
-#endif // !JAILBREAK_END
         case 1:
             return 8
         case 2:
@@ -96,7 +92,6 @@ class CustomizationViewController: UIThemedTableViewController {
         let cell: UITableViewCell
         
         if indexPath.section == 0 {
-#if !JAILBREAK_ENV
             if indexPath.row == 0 {
                 cell = NXTextFieldTableCell(title: "Username", hint: "Anonym", key: "LDEUsername", defaultValue: "Anonym")
             } else {
@@ -104,9 +99,6 @@ class CustomizationViewController: UIThemedTableViewController {
                     ksurface_sethostname(newValue)
                 }
             }
-#else
-            cell = NXTextFieldTableCell(title: "Username", hint: "i.e Anonymous", key: "LDEUsername", defaultValue: "Anonym")
-#endif // !JAILBREAK_END
         } else if indexPath.section == 1 {
             if indexPath.row == 0 {
                 themePreviewCell = ThemePickerPreviewCell()

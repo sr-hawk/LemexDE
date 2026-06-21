@@ -30,7 +30,6 @@
 #import <LindChain/Utils/LDEDebouncer.h>
 #import <LindChain/Utils/Utils.h>
 
-#if !JAILBREAK_ENV
 
 /* LiveContainer Headers */
 #import <LindChain/LiveContainer/LCUtils.h>
@@ -56,7 +55,6 @@
 
 bool liveProcessIsAvailable(void);
 
-#endif /* !JAILBREAK_ENV */
 
 /* Project Headers */
 #import <LindChain/Project/NXUser.h>

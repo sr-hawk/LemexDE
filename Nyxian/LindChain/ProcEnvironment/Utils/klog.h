@@ -26,7 +26,7 @@
 #import <Foundation/Foundation.h>
 #endif /* __OBJC__ */
 
-#if DEBUG && !JAILBREAK_ENV && HOST_ENV
+#if DEBUG && HOST_ENV
 
 #define klog_log(system, format, ...) \
     klog_log_internal((system), (format), ##__VA_ARGS__)

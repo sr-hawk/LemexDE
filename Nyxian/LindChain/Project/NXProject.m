@@ -298,7 +298,6 @@
     NSDictionary *plistList = @{
         @"/Config/Project.plist": projConfigPlist,
         @"/Config/Entitlements.plist": @{
-#if !JAILBREAK_ENV
             @"com.nyxian.pe.get_task_allowed": @(YES),
             @"com.nyxian.pe.task_for_pid": @(NO),
             @"com.nyxian.pe.process_enumeration": @(NO),
@@ -313,9 +312,6 @@
             @"com.nyxian.pe.dyld_hide_liveprocess": @(NO),
             @"com.nyxian.pe.platform": @(NO),
             @"com.nyxian.pe.platform_root": @(NO)
-#else
-            @"platform-application": @(YES)
-#endif // !JAILBREAK_ENV
         }
     };
     

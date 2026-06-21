@@ -53,32 +53,10 @@ define ensure_brew_package
 	fi
 endef
 
-THEOS ?= $(HOME)/theos
-export THEOS
-export PATH := $(THEOS)/bin:$(PATH)
-
 define ensure_macos
 	@if [ "$$(uname -s)" != "Darwin" ]; then \
 		printf '\033[31m\033[1m[!]\033[0m\033[31m this build requires macOS$(comma) detected: %s\033[0m\n' "$$(uname -s)"; \
 		exit 1; \
-	fi
-endef
-
-define ensure_theos
-	@if [ ! -d "$(THEOS)" ] || [ ! -f "$(THEOS)/makefiles/common.mk" ]; then \
-		printf '\033[33m\033[1m[?]\033[0m\033[33m theos not installed at %s. Run official installer? [y/N] \033[0m' '$(THEOS)'; \
-		if [ -t 0 ]; then read ans; else ans=n; fi; \
-		case "$$ans" in \
-			[yY]|[yY][eE][sS]) \
-				printf '\033[32m\033[1m[*]\033[0m\033[32m running theos installer...\033[0m\n'; \
-				bash -c "$$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)" || { \
-					printf '\033[31m\033[1m[!]\033[0m\033[31m theos installer failed\033[0m\n'; exit 1; }; \
-				[ -f "$(THEOS)/makefiles/common.mk" ] || { \
-					printf '\033[31m\033[1m[!]\033[0m\033[31m installer ran but %s/makefiles/common.mk missing\033[0m\n' '$(THEOS)'; exit 1; } ;; \
-			*) \
-				printf '\033[31m\033[1m[!]\033[0m\033[31m theos is required$(comma) see https://theos.dev\033[0m\n'; \
-				exit 1 ;; \
-		esac; \
 	fi
 endef
 
@@ -110,10 +88,8 @@ check:
 	$(call ensure_brew_package,pkgconf)
 	$(call ensure_brew_package,cmake)
 	$(call ensure_brew_package,libarchive)
-	$(call ensure_brew_package,dpkg)
 	$(call ensure_brew_package,openssl)
 	$(call ensure_brew_package,ninja)
-	$(call ensure_theos)
 	@$(call log_info,all dependencies are installed)
 else
 check:
@@ -126,25 +102,6 @@ all: jailed
 jailed: SCHEME := Nyxian
 jailed: FILE := emexDE.ipa
 jailed: clean check compile package-app clean
-
-rootless: SCHEME := NyxianForJB
-rootless: ARCH := iphoneos-arm64
-rootless: JB_PATH := /var/jb/
-rootless: clean check compile pseudo-sign package-deb clean
-
-roothide: SCHEME := NyxianForJB
-roothide: ARCH := iphoneos-arm64e
-roothide: JB_PATH := /
-roothide: clean check compile pseudo-sign package-deb clean
-
-rootful: SCHEME := NyxianForJB
-rootful: ARCH := iphoneos-arm
-rootful: JB_PATH := /
-rootful: clean check compile pseudo-sign package-deb clean
-
-trollstore: SCHEME := NyxianForJB
-trollstore: FILE := emexDE.tipa
-trollstore: clean check compile pseudo-sign package-app clean
 
 # Dependencies
 CoreCompiler/CoreCompilerSupportLibs:
@@ -162,22 +119,13 @@ Nyxian/LindChain/llama.xcframework:
 	rm -rf Nyxian/LindChain/llama.xcframework
 	cp -r ThirdParty/llama.cpp/build-apple/llama.xcframework Nyxian/LindChain/llama.xcframework
 
-# Needed for jailbroken version for permasigned apps
-Nyxian/LindChain/JBSupport/tshelper:
-	$(MAKE) -C TrollStore pre_build
-	$(MAKE) -C TrollStore make_fastPathSign MAKECMDGOALS=
-	$(MAKE) -C TrollStore make_roothelper MAKECMDGOALS=
-	$(MAKE) -C TrollStore make_trollstore MAKECMDGOALS=
-	$(MAKE) -C TrollStore make_trollhelper_embedded MAKECMDGOALS=
-	cp TrollStore/RootHelper/.theos/obj/trollstorehelper Nyxian/LindChain/JBSupport/tshelper
-
 # Helper
 update-config:
 	chmod +x version.sh
 	./version.sh
 
 # Methods
-compile: Nyxian/LindChain/JBSupport/tshelper CoreCompiler/CoreCompilerSupportLibs Nyxian/LindChain/llama.xcframework
+compile: CoreCompiler/CoreCompilerSupportLibs Nyxian/LindChain/llama.xcframework
 	chmod +x version.sh
 	./version.sh
 	xcodebuild \
@@ -191,21 +139,10 @@ compile: Nyxian/LindChain/JBSupport/tshelper CoreCompiler/CoreCompilerSupportLib
 		CODE_SIGNING_REQUIRED=NO \
 		CODE_SIGNING_ALLOWED=NO
 
-pseudo-sign:
-	codesign --sign - --entitlements ent/nyxianforjb.xml --force --timestamp=none build/Nyxian.xcarchive/Products/Applications/emexDEForJB.app
-
 package-app:
 	cp -r  build/Nyxian.xcarchive/Products/Applications Payload
 	-rm $(FILE)
 	zip -r $(FILE) ./Payload
-
-package-deb:
-	mkdir -p .package$(JB_PATH)
-	cp -r  build/Nyxian.xcarchive/Products/Applications .package$(JB_PATH)/Applications
-	find . -type f -name ".DS_Store" -delete
-	mkdir -p .package/DEBIAN
-	echo "Package: $(NXBUNDLE)\nName: $(NXNAME)\nVersion: $(NXVERSION)\nArchitecture: $(ARCH)\nDescription: Full fledged Xcode-like IDE for iOS\nIcon: https://raw.githubusercontent.com/ProjectNyxian/Nyxian/main/preview.png\nMaintainer: cr4zyengineer\nAuthor: cr4zyengineer\nSection: Utilities\nTag: role::hacker" > .package/DEBIAN/control
-	dpkg-deb -b --root-owner-group .package emexDE_$(NXVERSION)_$(ARCH).deb
 
 clean:
 	rm -rf Payload
@@ -216,13 +153,9 @@ clean:
 
 clean-artifacts:
 	-rm *.ipa
-	-rm *.deb
-	-rm *.tipa
 
 clean-all: clean clean-artifacts
 	rm -rf CoreCompiler/CoreCompilerSupportLibs
 	rm -rf Nyxian/LindChain/llama.xcframework
-	-rm Nyxian/LindChain/JBSupport/tshelper
 	cd LLVM-On-iOS; make clean; git reset --hard
-	cd TrollStore; make clean; git reset --hard
 	cd ThirdParty/llama.cpp; rm -rf build-apple build-ios-device build-ios-sim build-macos build-visionos build-visionos-sim build-tvos-device build-tvos-sim

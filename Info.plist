@@ -71,10 +71,6 @@
 	<true/>
 	<key>SBAppUsesLocalNotifications</key>
 	<integer>1</integer>
-	<key>TSRootBinaries</key>
-	<array>
-		<string>tshelper</string>
-	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

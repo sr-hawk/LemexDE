@@ -72,13 +72,18 @@ public extension AgentTools {
     /// write / build / run tools land.
     static func standard(project: NXProject) -> AgentTools {
         let workspace = ProjectWorkspace(root: project.url)
-        return AgentTools(workspace: workspace, tools: [
+        var tools: [AgentTool] = [
             ListFilesTool(workspace: workspace),
             ReadFileTool(workspace: workspace),
             SearchTool(workspace: workspace),
             WriteFileTool(workspace: workspace),
             ApplyPatchTool(workspace: workspace),
             BuildTool(project: project),
-        ])
+        ]
+#if !JAILBREAK_ENV
+        // run() drives the LiveProcess subsystem, available only in the jailed build.
+        tools.append(RunTool(project: project))
+#endif
+        return AgentTools(workspace: workspace, tools: tools)
     }
 }

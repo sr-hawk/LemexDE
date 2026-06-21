@@ -78,6 +78,7 @@ public extension AgentTools {
             SearchTool(workspace: workspace),
             WriteFileTool(workspace: workspace),
             ApplyPatchTool(workspace: workspace),
+            BuildTool(project: project),
         ])
     }
 }

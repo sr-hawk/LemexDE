@@ -158,7 +158,6 @@
 		79AA11BC2F7FFE24002FEAF2 /* nxtool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = nxtool; sourceTree = BUILT_PRODUCTS_DIR; };
 		79AA11C32F7FFEE4002FEAF2 /* libarchive.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libarchive.tbd; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib/libarchive.tbd; sourceTree = DEVELOPER_DIR; };
 		79AA11C42F7FFEFF002FEAF2 /* libarchive.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libarchive.tbd; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/libarchive.tbd; sourceTree = DEVELOPER_DIR; };
-		79AF512B2F1CBD110055004A /* emexDEForJB.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = emexDEForJB.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		79BF97F72E6291EE00C60D4C /* LiveProcess.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LiveProcess.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79BF9A8E2E62BA7D00C60D4C /* libarchive.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libarchive.tbd; path = usr/lib/libarchive.tbd; sourceTree = SDKROOT; };
 		860D91752FAE1F95000D321B /* MobileDevelopmentKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MobileDevelopmentKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -200,99 +199,6 @@
 				LindChain/Utils/Zip.m,
 			);
 			target = 79AA11BB2F7FFE24002FEAF2 /* nxtool */;
-		};
-		79AF512C2F1CBD110055004A /* Exceptions for "Nyxian" folder in "emexDEForJB" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				LindChain/Debugger/Utils.c,
-				LindChain/litehook/litehook.c,
-				LindChain/LiveContainer/LCBootstrap.m,
-				LindChain/LiveContainer/LCMachOUtils.m,
-				LindChain/LiveContainer/LCUtils.m,
-				LindChain/LiveContainer/Tweaks/Dead10ccFix.m,
-				LindChain/LiveContainer/Tweaks/Dyld.m,
-				"LindChain/LiveContainer/Tweaks/NSFileManager+GuestHooks.m",
-				LindChain/LiveContainer/Tweaks/NSUserDefaults.m,
-				LindChain/LiveContainer/Tweaks/SecItem.m,
-				"LindChain/LiveContainer/Tweaks/UIKit+GuestHooksInit.m",
-				LindChain/LiveContainer/utils.m,
-				LindChain/Private/mach/fileport.m,
-				LindChain/ProcEnvironment/application.m,
-				LindChain/ProcEnvironment/cred.c,
-				LindChain/ProcEnvironment/environment.m,
-				LindChain/ProcEnvironment/ioctl.c,
-				LindChain/ProcEnvironment/libproc.m,
-				LindChain/ProcEnvironment/Object/ArchiveObject.m,
-				LindChain/ProcEnvironment/Object/FDMapObject.m,
-				LindChain/ProcEnvironment/Object/FDObject.m,
-				LindChain/ProcEnvironment/Object/MachOObject.m,
-				LindChain/ProcEnvironment/Object/PEMachPort.m,
-				LindChain/ProcEnvironment/Object/PEObject.m,
-				LindChain/ProcEnvironment/panic.m,
-				LindChain/ProcEnvironment/posix_spawn.m,
-				LindChain/ProcEnvironment/Process/PEBootstrapRegistry.m,
-				LindChain/ProcEnvironment/Process/PEExtension.m,
-				LindChain/ProcEnvironment/Process/PELaunchService.m,
-				LindChain/ProcEnvironment/Process/PELaunchServiceRegistry.m,
-				LindChain/ProcEnvironment/proxy.m,
-				LindChain/ProcEnvironment/Server/Server.m,
-				LindChain/ProcEnvironment/Server/ServerSession.m,
-				LindChain/ProcEnvironment/Surface/entitlement.c,
-				LindChain/ProcEnvironment/Surface/key.c,
-				LindChain/ProcEnvironment/Surface/obj/alloc.c,
-				LindChain/ProcEnvironment/Surface/obj/event.c,
-				LindChain/ProcEnvironment/Surface/obj/reference.c,
-				LindChain/ProcEnvironment/Surface/permit.c,
-				LindChain/ProcEnvironment/Surface/proc/counter.c,
-				LindChain/ProcEnvironment/Surface/proc/fork.m,
-				LindChain/ProcEnvironment/Surface/proc/insert.c,
-				LindChain/ProcEnvironment/Surface/proc/list.c,
-				LindChain/ProcEnvironment/Surface/proc/lookup.c,
-				LindChain/ProcEnvironment/Surface/proc/proc.c,
-				LindChain/ProcEnvironment/Surface/proc/remove.c,
-				LindChain/ProcEnvironment/Surface/radix/radix.c,
-				LindChain/ProcEnvironment/Surface/surface.m,
-				LindChain/ProcEnvironment/Surface/sys/compat/getent.c,
-				LindChain/ProcEnvironment/Surface/sys/compat/gettast.c,
-				LindChain/ProcEnvironment/Surface/sys/compat/handoffep.c,
-				LindChain/ProcEnvironment/Surface/sys/compat/pectl.m,
-				LindChain/ProcEnvironment/Surface/sys/compat/procpath.c,
-				LindChain/ProcEnvironment/Surface/sys/compat/setent.c,
-				LindChain/ProcEnvironment/Surface/sys/compat/waittask.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/getgid.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/getsid.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/getuid.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/setgid.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/setsid.c,
-				LindChain/ProcEnvironment/Surface/sys/cred/setuid.c,
-				LindChain/ProcEnvironment/Surface/sys/host/ioctl.c,
-				LindChain/ProcEnvironment/Surface/sys/host/sysctl.m,
-				LindChain/ProcEnvironment/Surface/sys/proc/kill.m,
-				LindChain/ProcEnvironment/Surface/sys/proc/wait4.c,
-				LindChain/ProcEnvironment/Surface/sys/syscall.c,
-				LindChain/ProcEnvironment/Surface/trust.c,
-				LindChain/ProcEnvironment/Surface/tty/attach.c,
-				LindChain/ProcEnvironment/Surface/tty/lookup.c,
-				LindChain/ProcEnvironment/Surface/tty/tty.m,
-				LindChain/ProcEnvironment/Surface/tty/utils.c,
-				LindChain/ProcEnvironment/syscall.c,
-				LindChain/ProcEnvironment/Syscall/mach_syscall_client.c,
-				LindChain/ProcEnvironment/Syscall/mach_syscall_server.c,
-				LindChain/ProcEnvironment/Syscall/payload.c,
-				LindChain/ProcEnvironment/sysctl.c,
-				LindChain/ProcEnvironment/tfp.c,
-				LindChain/ProcEnvironment/Utils/fd.c,
-				LindChain/ProcEnvironment/Utils/klog.m,
-				LindChain/ProcEnvironment/Utils/ktfp.c,
-				LindChain/ProcEnvironment/vfork.c,
-				LindChain/Utils/CFTools.c,
-				LindChain/WindowServer/Session/NXWindowSessionTerminal.m,
-				UI/Settings/CertificateManagement.swift,
-				UI/Settings/CertificateViewController.swift,
-				UI/Settings/KernelLogViewController.swift,
-				UI/Settings/MachOPatcherViewController.swift,
-			);
-			target = 79AF51072F1CBD110055004A /* emexDEForJB */;
 		};
 		79BF983D2E62930600C60D4C /* Exceptions for "LiveProcess" folder in "LiveProcess" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -430,18 +336,6 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		7960686E2F3F357400CE34D7 /* Exceptions for "Nyxian" folder in "Embed Frameworks" phase from "emexDEForJB" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			attributesByRelativePath = {
-				LindChain/OpenSSL.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
-				LindChain/llama.xcframework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
-			};
-			buildPhase = 79FDA8862F3F257900692496 /* Embed Frameworks */;
-			membershipExceptions = (
-				LindChain/OpenSSL.xcframework,
-				LindChain/llama.xcframework,
-			);
-		};
 		86DCC2932FA520EF00973169 /* Exceptions for "CoreCompiler" folder in "Embed Libraries" phase from "CoreCompiler" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
@@ -527,8 +421,6 @@
 			exceptions = (
 				798BBD332F1D265200CBB23F /* Exceptions for "Nyxian" folder in "emexDE" target */,
 				AFF4DBDB2DCA5DEA00B1B5F9 /* Exceptions for "Nyxian" folder in "Embed Libraries" phase from "emexDE" target */,
-				79AF512C2F1CBD110055004A /* Exceptions for "Nyxian" folder in "emexDEForJB" target */,
-				7960686E2F3F357400CE34D7 /* Exceptions for "Nyxian" folder in "Embed Frameworks" phase from "emexDEForJB" target */,
 				79BF9A972E62BB6900C60D4C /* Exceptions for "Nyxian" folder in "LiveProcess" target */,
 				79AA11C62F7FFF12002FEAF2 /* Exceptions for "Nyxian" folder in "nxtool" target */,
 			);
@@ -642,7 +534,6 @@
 				7944B5662DEC74FC00834134 /* Frameworks */,
 				79BF97F72E6291EE00C60D4C /* LiveProcess.appex */,
 				7944B5652DEC74EA00834134 /* emexDE.app */,
-				79AF512B2F1CBD110055004A /* emexDEForJB.app */,
 				79AA11BC2F7FFE24002FEAF2 /* nxtool */,
 				86DCC25A2FA5209600973169 /* CoreCompiler.framework */,
 				860D91752FAE1F95000D321B /* MobileDevelopmentKit.framework */,
@@ -690,39 +581,6 @@
 			productName = nxtool;
 			productReference = 79AA11BC2F7FFE24002FEAF2 /* nxtool */;
 			productType = "com.apple.product-type.tool";
-		};
-		79AF51072F1CBD110055004A /* emexDEForJB */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 79AF51282F1CBD110055004A /* Build configuration list for PBXNativeTarget "emexDEForJB" */;
-			buildPhases = (
-				79AF51162F1CBD110055004A /* Sources */,
-				79AF51172F1CBD110055004A /* Frameworks */,
-				79AF511F2F1CBD110055004A /* Resources */,
-				79FDA8862F3F257900692496 /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				860D918B2FAE1FC5000D321B /* PBXTargetDependency */,
-				860D91E72FAE2ED7000D321B /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				AF9916DB2DC8C42200DDF895 /* Nyxian */,
-			);
-			name = emexDEForJB;
-			packageProductDependencies = (
-				79AF510C2F1CBD110055004A /* TreeSitterObjc */,
-				79AF510E2F1CBD110055004A /* TreeSitterC */,
-				79AF51102F1CBD110055004A /* Runestone */,
-				79AF51122F1CBD110055004A /* TreeSitterXML */,
-				79AF51142F1CBD110055004A /* SwiftTerm */,
-				79B708BD2F731590000F38E7 /* TreeSitterCPP */,
-				8630CBB62FABE19E00C6EE6D /* UIOnboarding */,
-				86E4D4F82FB8CF70008BFE4D /* TreeSitterSwift */,
-			);
-			productName = LindDE;
-			productReference = 79AF512B2F1CBD110055004A /* emexDEForJB.app */;
-			productType = "com.apple.product-type.application";
 		};
 		79BF97F62E6291EE00C60D4C /* LiveProcess */ = {
 			isa = PBXNativeTarget;
@@ -885,7 +743,6 @@
 			projectRoot = "";
 			targets = (
 				AF9916D82DC8C42200DDF895 /* emexDE */,
-				79AF51072F1CBD110055004A /* emexDEForJB */,
 				79BF97F62E6291EE00C60D4C /* LiveProcess */,
 				860D91742FAE1F95000D321B /* MobileDevelopmentKit */,
 				86DCC2592FA5209600973169 /* CoreCompiler */,
